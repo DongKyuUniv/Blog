@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"github.com/mholt/binding"
 	"github.com/julienschmidt/httprouter"
+	"fmt"
 )
 
 type Notice struct {
@@ -26,7 +27,7 @@ func (n *Notice) FieldMap(req *http.Request) binding.FieldMap {
 	return binding.FieldMap{&n.TITLE: "title", &n.DESCRIPTION: "description", &n.CREATED: timeStamp()}
 }
 
-func getNotices(w http.ResponseWriter, req *http.Request, ps httprouter.Params) {
+func getNoticeDataList() (error, []Notice) {
 	// 몽고DB 세션 생성
 	session := mongoSession.Copy()
 
@@ -38,11 +39,52 @@ func getNotices(w http.ResponseWriter, req *http.Request, ps httprouter.Params) 
 	err := session.DB(DATABASE).C(TABLE_NOTICE).Find(nil).All(&notices)
 	if err != nil {
 		// 오류 발생 시
+		return err, nil
+	}
+
+	return nil, notices
+}
+
+func getNoticeData(id string) (error, Notice) {
+	fmt.Print("id = ")
+	fmt.Println(id)
+
+	// 몽고DB 세션 생성
+	session := mongoSession.Copy()
+
+	// 몽고 DB 닫는 세션 defer로 등록
+	defer  session.Close()
+
+	var notice Notice
+	// 모든 게시물 조회
+	err := session.DB(DATABASE).C(TABLE_NOTICE).Find(bson.M{"id": bson.ObjectIdHex(id)}).One(&notice)
+	if err != nil {
+		// 오류 발생 시
+		return err, notice
+	}
+	return nil, notice
+}
+
+func getNotices(w http.ResponseWriter, req *http.Request, ps httprouter.Params) {
+	err, notices := getNoticeDataList()
+	if err != nil {
+		// 오류 발생 시
 		renderer.JSON(w, http.StatusInternalServerError, err)
 		return
 	}
 
 	renderer.JSON(w, http.StatusOK, notices)
+}
+
+func getNotice(w http.ResponseWriter, req *http.Request, ps httprouter.Params) {
+	err, notice := getNoticeData(req.URL.Query().Get("id"))
+	if err != nil {
+		// 오류 발생 시
+		renderer.JSON(w, http.StatusInternalServerError, err)
+		return
+	}
+
+	renderer.HTML(w, http.StatusOK, "noticeDetail", map[string]Notice {"notice": notice})
 }
 
 func createNotice(w http.ResponseWriter, req *http.Request, ps httprouter.Params) {
@@ -53,6 +95,12 @@ func createNotice(w http.ResponseWriter, req *http.Request, ps httprouter.Params
 		return
 	}
 
+	fmt.Print("title = ")
+	fmt.Println(n.TITLE)
+
+	fmt.Print("des = ")
+	fmt.Println(n.DESCRIPTION)
+
 	// 몽고 DB 세션 생성
 	session := mongoSession.Copy()
 
@@ -60,8 +108,6 @@ func createNotice(w http.ResponseWriter, req *http.Request, ps httprouter.Params
 
 	// 몽고DB 아이디 생성
 	n.ID = bson.NewObjectId()
-	n.TITLE = "title"
-	n.DESCRIPTION = "description"
 	n.CREATED = time.Now()
 
 	// notice 정보 저장을 위한 몽고DB 컬렉션 객체 생성
@@ -75,5 +121,5 @@ func createNotice(w http.ResponseWriter, req *http.Request, ps httprouter.Params
 	}
 
 	// 처리 결과 반환
-	renderer.JSON(w, http.StatusCreated, n)
+	http.Redirect(w, req, "/", 301)
 }

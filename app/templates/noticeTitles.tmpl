@@ -5,7 +5,7 @@
     <div id="notices" class="list-group">
     </div>
 
-    <form class="input-group">
+    <form class="input-group" action="/createNotice">
 
         <button type="submit" class="btn btn-default btn-lg">
             <span class="glyphicon glyphicon-star" aria-hidden="true"></span> 글 쓰기
@@ -19,18 +19,16 @@
 
         var createNoticeBox = function (notice) {
             $('#notices').prepend(
-                    $("<a>").attr("id", notice.id)
-                            .attr("href", "#")
-                            .text(notice.title)
+                    $("<a>").attr("id", notice.ID)
+                            .attr("href", "/notice?id=" + notice.ID)
+                            .text(notice.TITLE)
                             .addClass("list-group-item")
-                            .bind("click", function (e) {
-                                e.preventDefault();
-                            })
+
             );
         }
 
         $(document).ready(function () {
-            $.get("/notices", function (notices) {
+            $.get("/notices", function(notices) {
                 for (var i = 0; i < notices.length; i++) {
                     createNoticeBox(notices[i]);
                 }

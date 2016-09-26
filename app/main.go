@@ -33,10 +33,17 @@ func main() {
 
 	router.GET("/", func(w http.ResponseWriter, req *http.Request, ps httprouter.Params) {
 		// 템플릿 렌더링
-		renderer.HTML(w, http.StatusOK, "index", map[string]string{"title": "Simple Chat!"})
+		renderer.HTML(w, http.StatusOK, "index", map[string]string{"title": "BangUl Blog!"})
 	})
 
 	router.GET("/notices", getNotices)
+	router.GET("/notice", getNotice)
+
+	router.GET("/createNotice", func(w http.ResponseWriter, req *http.Request, ps httprouter.Params) {
+		renderer.HTML(w, http.StatusOK, "createNotice", map[string]string{})
+	})
+
+	router.POST("/createNotice", createNotice)
 
 	// negroni 미들웨어 생성
 	n:= negroni.Classic()
